@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board: #16261e;
+    --board-edge: #0f1b15;
+    --chalk: #f1ede3;
+    --chalk-dim: #b9c4bb;
+    --line: #46604f;
+    --x-color: #f2c14e;
+    --o-color: #7ec8e3;
+    --win-color: #ef7a6d;
+    --frame: #7a5a3a;
+    --frame-dark: #5c4128;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: radial-gradient(ellipse at 50% -10%, #223b2e 0%, #0f1b15 70%);
+    font-family:'Space Grotesk', sans-serif;
+    color: var(--chalk);
+    padding: 24px;
+  }
+
+  .room{
+    width:100%;
+    max-width: 440px;
+  }
+
+  .board-frame{
+    background: linear-gradient(160deg, var(--frame), var(--frame-dark));
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.6),
+      inset 0 2px 0 rgba(255,255,255,0.08);
+  }
+
+  .chalkboard{
+    background: var(--board);
+    border: 1px solid var(--board-edge);
+    border-radius: 10px;
+    padding: 28px 24px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chalkboard::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.025) 0, transparent 40%),
+      radial-gradient(circle at 80% 75%, rgba(255,255,255,0.02) 0, transparent 45%);
+    pointer-events:none;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom: 18px;
+    position: relative;
+  }
+
+  h1{
+    font-family:'Kalam', cursive;
+    font-weight:700;
+    font-size: 2.4rem;
+    margin: 0;
+    letter-spacing: 0.5px;
+    transform: rotate(-1.2deg);
+    text-shadow: 0 0 14px rgba(241,237,227,0.15);
+  }
+
+  .subtitle{
+    font-family:'Kalam', cursive;
+    color: var(--chalk-dim);
+    font-size: 0.95rem;
+    margin-top: 2px;
+  }
+
+  .status{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin: 16px 0 18px;
+    font-size: 0.95rem;
+    color: var(--chalk-dim);
+    min-height: 1.4em;
+  }
+
+  .status .mark{
+    font-family:'Kalam', cursive;
+    font-weight:700;
+    font-size: 1.15rem;
+  }
+  .status .mark.x{ color: var(--x-color); }
+  .status .mark.o{ color: var(--o-color); }
+
+  .grid{
+    position: relative;
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+
+  .cell{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* chalk grid lines drawn with box-shadow-esque borders on inner cells */
+  .cell{ border: 2px solid var(--line); }
+  .cell:nth-child(3n+1){ border-left: none; }
+  .cell:nth-child(3n){ border-right: none; }
+  .cell:nth-child(-n+3){ border-top: none; }
+  .cell:nth-child(n+7){ border-bottom: none; }
+
+  .cell .mark-svg{
+    width: 56%;
+    height: 56%;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.15s ease, transform 0.25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .cell.filled .mark-svg{ opacity: 1; transform: scale(1); }
+
+  .cell:not(.filled):hover{ background: rgba(241,237,227,0.04); }
+
+  .cell .mark-svg path, .cell .mark-svg line{
+    fill:none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .x-stroke{ stroke: var(--x-color); stroke-width: 9; }
+  .o-stroke{ stroke: var(--o-color); stroke-width: 9; }
+
+  .cell.win .mark-svg path, .cell.win .mark-svg circle{
+    stroke: var(--win-color);
+  }
+
+  .strike{
+    position:absolute;
+    background: var(--win-color);
+    border-radius: 4px;
+    height: 5px;
+    transform-origin: left center;
+    opacity: 0;
+    transition: opacity 0.2s ease, width 0.35s ease;
+    box-shadow: 0 0 10px rgba(239,122,109,0.6);
+  }
+  .strike.show{ opacity: 1; }
+
+  .controls{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    margin-top: 20px;
+    gap: 10px;
+  }
+
+  .tally{
+    display:flex;
+    gap: 14px;
+    font-size: 0.85rem;
+    color: var(--chalk-dim);
+  }
+  .tally span{ display:flex; align-items:center; gap:5px; }
+  .tally b{ color: var(--chalk); font-weight:600; }
+  .tally .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .dot.x{ background: var(--x-color); }
+  .dot.o{ background: var(--o-color); }
+  .dot.d{ background: var(--chalk-dim); }
+
+  button.reset{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size: 0.85rem;
+    color: var(--board);
+    background: var(--chalk);
+    border: none;
+    padding: 9px 16px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease;
+  }
+  button.reset:hover{ background: #ffffff; }
+  button.reset:active{ transform: scale(0.96); }
+
+  footer{
+    text-align:center;
+    margin-top: 14px;
+    font-size: 0.75rem;
+    color: rgba(241,237,227,0.35);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cell .mark-svg, .strike, button.reset{ transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="room">
+  <div class="board-frame">
+    <div class="chalkboard">
+      <header>
+        <h1>Tic Tac Toe</h1>
+        <div class="subtitle">chalk it up</div>
+      </header>
+
+      <div class="status" id="status">
+        <span>Player</span><span class="mark x" id="turnMark">X</span><span>'s move</span>
+      </div>
+
+      <div class="grid" id="grid">
+        <!-- 9 cells injected by JS -->
+        <div class="strike" id="strike"></div>
+      </div>
+
+      <div class="controls">
+        <div class="tally">
+          <span><span class="dot x"></span>X <b id="scoreX">0</b></span>
+          <span><span class="dot o"></span>O <b id="scoreO">0</b></span>
+          <span><span class="dot d"></span>Draw <b id="scoreD">0</b></span>
+        </div>
+        <button class="reset" id="resetBtn">New game</button>
+      </div>
+    </div>
+  </div>
+  <footer>3 in a row — across, down, or diagonal</footer>
+</div>
+
+<script>
+(function(){
+  const grid = document.getElementById('grid');
+  const statusEl = document.getElementById('status');
+  const turnMarkEl = document.getElementById('turnMark');
+  const strikeEl = document.getElementById('strike');
+  const resetBtn = document.getElementById('resetBtn');
+  const scoreXEl = document.getElementById('scoreX');
+  const scoreOEl = document.getElementById('scoreO');
+  const scoreDEl = document.getElementById('scoreD');
+
+  const WIN_LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  let board = Array(9).fill(null);
+  let current = 'X';
+  let gameOver = false;
+  let scores = { X: 0, O: 0, D: 0 };
+  const cells = [];
+
+  function markSVG(player){
+    if(player === 'X'){
+      return `<svg class="mark-svg" viewBox="0 0 100 100">
+        <line class="x-stroke" x1="22" y1="22" x2="78" y2="78"/>
+        <line class="x-stroke" x1="78" y1="22" x2="22" y2="78"/>
+      </svg>`;
+    }
+    return `<svg class="mark-svg" viewBox="0 0 100 100">
+      <circle class="o-stroke" cx="50" cy="50" r="30" stroke="${'var(--o-color)'}" stroke-width="9" fill="none"/>
+    </svg>`;
+  }
+
+  function buildGrid(){
+    grid.querySelectorAll('.cell').forEach(c => c.remove());
+    for(let i = 0; i < 9; i++){
+      const cell = document.createElement('button');
+      cell.className = 'cell';
+      cell.setAttribute('aria-label', 'cell ' + (i+1));
+      cell.addEventListener('click', () => handleMove(i));
+      grid.insertBefore(cell, strikeEl);
+      cells.push(cell);
+    }
+  }
+
+  function handleMove(i){
+    if(gameOver || board[i]) return;
+    board[i] = current;
+    const cell = cells[i];
+    cell.innerHTML = markSVG(current);
+    cell.classList.add('filled');
+
+    const win = getWin();
+    if(win){
+      gameOver = true;
+      win.line.forEach(idx => cells[idx].classList.add('win'));
+      drawStrike(win.line);
+      scores[current]++;
+      updateScores();
+      setStatus(`Player ${current} wins!`, current);
+      return;
+    }
+    if(board.every(v => v)){
+      gameOver = true;
+      scores.D++;
+      updateScores();
+      setStatus("It's a draw!", null);
+      return;
+    }
+    current = current === 'X' ? 'O' : 'X';
+    setStatus(null, current);
+  }
+
+  function getWin(){
+    for(const line of WIN_LINES){
+      const [a,b,c] = line;
+      if(board[a] && board[a] === board[b] && board[a] === board[c]){
+        return { player: board[a], line };
+      }
+    }
+    return null;
+  }
+
+  function drawStrike(line){
+    const cellRects = line.map(idx => cells[idx].getBoundingClientRect());
+    const gridRect = grid.getBoundingClientRect();
+    const start = cellRects[0];
+    const end = cellRects[2];
+    const x1 = start.left + start.width/2 - gridRect.left;
+    const y1 = start.top + start.height/2 - gridRect.top;
+    const x2 = end.left + end.width/2 - gridRect.left;
+    const y2 = end.top + end.height/2 - gridRect.top;
+    const length = Math.hypot(x2-x1, y2-y1);
+    const angle = Math.atan2(y2-y1, x2-x1) * 180 / Math.PI;
+
+    strikeEl.style.left = x1 + 'px';
+    strikeEl.style.top = (y1 - 2.5) + 'px';
+    strikeEl.style.width = '0px';
+    strikeEl.style.transform = `rotate(${angle}deg)`;
+    requestAnimationFrame(() => {
+      strikeEl.classList.add('show');
+      strikeEl.style.width = length + 'px';
+    });
+  }
+
+  function setStatus(message, playerForMark){
+    if(message){
+      statusEl.innerHTML = `<span>${message}</span>`;
+      return;
+    }
+    statusEl.innerHTML = `<span>Player</span><span class="mark ${playerForMark.toLowerCase()}" id="turnMark">${playerForMark}</span><span>'s move</span>`;
+  }
+
+  function updateScores(){
+    scoreXEl.textContent = scores.X;
+    scoreOEl.textContent = scores.O;
+    scoreDEl.textContent = scores.D;
+  }
+
+  function resetBoard(){
+    board = Array(9).fill(null);
+    current = 'X';
+    gameOver = false;
+    cells.forEach(c => { c.innerHTML = ''; c.classList.remove('filled','win'); });
+    strikeEl.classList.remove('show');
+    strikeEl.style.width = '0px';
+    setStatus(null, 'X');
+  }
+
+  resetBtn.addEventListener('click', resetBoard);
+
+  buildGrid();
+  setStatus(null, 'X');
+})();
+</script>
+
+</body>
+</html>
